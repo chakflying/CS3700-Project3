@@ -5,7 +5,7 @@ extern crate log;
 
 fn main() {
     env_logger::init();
-    debug!("Started");
+    debug!("Sender Started");
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer);
     info!("{}",buffer);
