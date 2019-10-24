@@ -1,4 +1,5 @@
-use std::io::{self, Read};
+use std::io;
+use std::io::prelude::*;
 use std::time::{Duration,Instant};
 use chrono::prelude::*;
 use std::net::UdpSocket;
@@ -24,16 +25,14 @@ fn main() {
     let client = args.value_of("client").unwrap();
     let client_ip = &client[0..client.find(":").expect("Argument Incorrect formatting")];
     let client_port = &client[client.find(":").unwrap()+1..];
-    let mut rng = rand::thread_rng();
-    let mut port = rng.gen_range(29170, 29998);
-    let mut socket_bind;
-    while {
-        socket_bind = UdpSocket::bind(format!("{}:{}",client_ip,port));
-        socket_bind.is_err()
-    } { port = rng.gen_range(29170, 29998); }
-    let socket = socket_bind.unwrap();
-    eprintln!("{:?} [bound] {}", Local::now(), port);
+    let socket = protocol::bind_socket(client_ip);
     socket.connect(format!("127.0.0.1:{}",client_port)).expect("connect to receiver failed");
-    let mut buf = [0; 10];
-    socket.send(&buf).expect("Send Failed");
+
+    let stdin = io::stdin();
+    let mut stdin = stdin.lock();
+    let buffer = stdin.fill_buf().unwrap();
+
+    socket.send(&buffer).expect("Send Failed");
+    let length = buffer.len();
+    stdin.consume(length);
 }
