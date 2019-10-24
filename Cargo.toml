@@ -8,5 +8,8 @@ edition = "2018"
 
 [dependencies]
 log = "0.4.8"
-env_logger = "0.7.1"
+pretty_env_logger = "0.3"
 clap = "2.33.0"
+rand = "0.7"
+chrono = "0.4"
+bincode = "1.2.0"
