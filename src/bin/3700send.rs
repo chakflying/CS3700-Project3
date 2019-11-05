@@ -6,6 +6,9 @@ use chrono::prelude::*;
 use rand::Rng;
 use clap::{App, Arg};
 use std::time::{Duration, Instant};
+extern crate crypto;
+use crypto::md5::Md5;
+use crypto::digest::Digest;
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -86,6 +89,10 @@ fn main() {
 
     let mut buffer = Vec::new();
     io::stdin().read_to_end(&mut buffer);
+
+    let mut hasher = Md5::new();
+    hasher.input(&buffer);
+    info!("Hash of input data: {}", hasher.result_str());
 
     let data_segment = state.build_new_data_packet(&buffer);
     state.send_a_packet_in_queue();
