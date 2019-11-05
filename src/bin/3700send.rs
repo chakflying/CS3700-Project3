@@ -97,7 +97,7 @@ fn main() {
     }
 
     let mut more_to_send = true;
-    while more_to_send {
+    while more_to_send && state.closing == None {
         debug!("Current congestion window: {}", state.congestion_window);
         state.resend_lost_packet_data(&buffer);
         state.send_all_in_queue();
@@ -109,7 +109,7 @@ fn main() {
          } {}
         if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();
-        if state.sent_end_byte_processed && state.lost_packets.len() == 0 && state.send_state.send_queue.len() == 0 && state.bytes_in_flight == 0 { more_to_send = false; }
+        // if state.sent_end_byte_processed && state.lost_packets.len() == 0 && state.send_state.send_queue.len() == 0 && state.bytes_in_flight == 0 { more_to_send = false; }
     }
     eprintln!("{:?} [completed]", Local::now());
     let mut timer = Instant::now();
