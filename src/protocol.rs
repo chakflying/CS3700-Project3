@@ -583,7 +583,6 @@ impl State {
         // debug!("Data: {}", str::from_utf8(&data_frame.data).unwrap());
         if data_frame.end {
             self.receive_state.end_received = Some(data_frame.byte_offset + data_frame.data.len() as u64);
-            print!("{}", str::from_utf8(&self.receive_state.assembled_data).unwrap());
         }
     }
     pub fn on_ack_received(&mut self, ack_frame: &AckFrame) {
