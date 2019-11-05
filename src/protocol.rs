@@ -158,7 +158,7 @@ impl Header {
     }
     pub fn deserialize(data: &Vec<u8>) -> (Header, usize) {
         let header_size = data[0] as usize;
-        debug!("Decoded header size: {}", header_size + 1);
+        // debug!("Decoded header size: {}", header_size + 1);
         let packet_type: PacketType = bincode::deserialize(&data[1..2]).unwrap();
         let packet_num = u64::decode_var(&data[2..1 + header_size]).0;
         (
@@ -191,7 +191,7 @@ impl Frame {
     }
     pub fn deserialize(data: &Vec<u8>) -> (Frame, usize) {
         let frame_size = u16::from_ne_bytes([data[0], data[1]]) as usize;
-        debug!("Decoded frame size: {}", frame_size + 2);
+        // debug!("Decoded frame size: {}", frame_size + 2);
         (
             Frame {
                 frame_type: bincode::deserialize(&data[2..3]).unwrap(),
@@ -352,9 +352,8 @@ impl State {
             self.socket.connect(result.unwrap().1).expect("connect to sender failed");
             self.connected = true;
         }
-        debug!("{} bytes received.", num_bytes_read);
         let packet = Packet::deserialize(&buf[..num_bytes_read].into());
-        debug!("Received packet: {:?}", packet);
+        debug!("Received packet size {}: {{packet_type: {:?}, packet_num: {}  Frame[0]: type: {:?}}}", num_bytes_read, packet.header.packet_type, packet.header.packet_num, packet.frames[0].frame_type);
         let packet_num = packet.header.packet_num;
         if self.received_packets.contains_key(&packet_num) {
             return false;
@@ -571,7 +570,9 @@ impl State {
     }
     pub fn on_data_received(&mut self, data_frame: &DataFrame) {
         debug!("Processing DataFrame: {{ end:{}, offset:{} }}", data_frame.end, data_frame.byte_offset);
-        self.receive_state.received_data.insert(data_frame.byte_offset, data_frame.data.clone());
+        if !self.receive_state.received_data.contains_key(&data_frame.byte_offset) {
+            self.receive_state.received_data.insert(data_frame.byte_offset, data_frame.data.clone());
+        }
         // debug!("Data: {}", str::from_utf8(&data_frame.data).unwrap());
         if data_frame.end {
             self.receive_state.end_received = Some(data_frame.byte_offset + data_frame.data.len() as u64);
