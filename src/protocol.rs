@@ -630,7 +630,6 @@ impl State {
             output = self.smoothed_RTT + cmp::max(4 * self.RTT_variance, Duration::from_millis(1).as_nanos() as u64) + Duration::from_millis(1).as_nanos() as u64;
         }
         output = output * (self.PTO_amount as u64 + 1);
-        debug!("Using PTO of {}.", output);
         output
     }
     pub fn get_new_acked_packets(&mut self, ack_frame: &AckFrame) -> Vec<SentPacket> {
@@ -728,6 +727,7 @@ impl State {
             } else {
                 // larger than largest ACKed, PTO timeout
                 if sent_packet.time_sent.elapsed().as_nanos() as u64 > PTO {
+                    debug!("PTO of {} triggered.", PTO);
                     PTO_triggered = true;
                     lost.push(packet_num.clone());
                 }
@@ -746,7 +746,6 @@ impl State {
         }
     }
     pub fn on_PTO(&mut self) {
-        info!("PTO detected");
         self.PTO_amount += 1;
         if self.PTO_amount == 4 {
             self.congestion_window = 14720;
