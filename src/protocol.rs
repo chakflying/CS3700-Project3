@@ -630,6 +630,7 @@ impl State {
             output = self.smoothed_RTT + cmp::max(4 * self.RTT_variance, Duration::from_millis(1).as_nanos() as u64) + Duration::from_millis(1).as_nanos() as u64;
         }
         output = output * (self.PTO_amount as u64 + 1);
+        debug!("Using PTO of {}.", output);
         output
     }
     pub fn get_new_acked_packets(&mut self, ack_frame: &AckFrame) -> Vec<SentPacket> {
@@ -686,7 +687,7 @@ impl State {
             self.congestion_window += acked_packet.size;
             debug!("In slow start, increased congestion window to {}", self.congestion_window);
         } else {
-            self.congestion_window += 1472 * (acked_packet.size / self.congestion_window);
+            self.congestion_window += (1472.0 * (acked_packet.size as f64 / self.congestion_window as f64)) as usize;
             debug!("In AIMD, increased congestion window to {}", self.congestion_window);
         }
     }

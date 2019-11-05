@@ -2,7 +2,7 @@ use chrono::prelude::*;
 use clap::{App, Arg};
 use rand::Rng;
 use std::collections::{HashMap, VecDeque};
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::{str, cmp};
 use std::time::{Duration, Instant};
 
