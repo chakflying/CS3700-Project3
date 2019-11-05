@@ -340,7 +340,6 @@ impl State {
             Err(e) => {
                 error!("IO error occurred: {}", e);
                 std::process::exit(0);
-                None
             }
         };
         if result != None {
