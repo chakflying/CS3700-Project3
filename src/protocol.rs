@@ -378,10 +378,11 @@ impl State {
                 let ackframe = AckFrame::deserialize(&frame.frame_data);
                 self.on_ack_received(&ackframe);
             } else if frame.frame_type == FrameType::CLOSE {
+                if self.closing != None { self.connected = false; return true; }
                 let mut packet = self.build_new_ack_packet();
                 packet.frames.push(self.generate_close_frame());
+                self.closing = Some(packet.header.packet_num);
                 self.send_packet(packet);
-                self.connected = false;
                 return true;
             }
         }
