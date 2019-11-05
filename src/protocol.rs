@@ -423,7 +423,7 @@ impl State {
         }
     }
     pub fn send_new_data(&mut self, data: &Vec<u8>) {
-        if self.send_state.send_queue.len() != 0 { info!("Send queue not empty when calling send_new_data()"); }
+        if self.send_state.send_queue.len() != 0 { info!("Send queue not empty when calling send_new_data()"); return; }
         while self.bytes_in_flight < self.congestion_window && !self.sent_end_byte_processed {
             self.build_new_data_packet(data);
             if self.send_a_packet_in_queue() == false {break;}
@@ -516,6 +516,7 @@ impl State {
         let packet = self.send_state.send_queue.pop_front().unwrap();
         if self.bytes_in_flight + packet.len() > self.congestion_window {
             self.send_state.send_queue.push_front(packet);
+            debug!("Queue is full, not sending any more.");
             return false;
         }
         self.send_packet(packet);
@@ -569,9 +570,9 @@ impl State {
         self.sent_packets.insert(sent_packet.packet_num, sent_packet);
     }
     pub fn on_data_received(&mut self, data_frame: &DataFrame) {
-        debug!("Processing DataFrame: {:?}", data_frame);
+        debug!("Processing DataFrame: {{ end:{}, offset:{} }}", data_frame.end, data_frame.byte_offset);
         self.receive_state.received_data.insert(data_frame.byte_offset, data_frame.data.clone());
-        debug!("Data: {}", str::from_utf8(&data_frame.data).unwrap());
+        // debug!("Data: {}", str::from_utf8(&data_frame.data).unwrap());
         if data_frame.end {
             self.receive_state.end_received = Some(data_frame.byte_offset + data_frame.data.len() as u64);
             print!("{}", str::from_utf8(&self.receive_state.assembled_data).unwrap());
@@ -601,6 +602,7 @@ impl State {
     }
     pub fn congestion_event(&mut self, sent_time: Instant) {
         if !self.cc_is_in_congestion_recovery(sent_time) {
+            debug!("Congestion event started.");
             self.congestion_recovery_start_time = Some(Instant::now());
             self.congestion_window = (self.congestion_window as f64 * 0.5) as usize;
             self.congestion_window = cmp::max(self.congestion_window, 14720);
@@ -741,6 +743,7 @@ impl State {
     }
     pub fn on_packets_lost(&mut self, lost_packets: Vec<SentPacket>) {
         for lost_packet in lost_packets.iter() {
+            debug!("Packet {:?} declared as lost.", lost_packet);
             self.cc_on_packet_lost(lost_packet);
             self.lost_packets.push_back(lost_packet.packet_num);
         }
