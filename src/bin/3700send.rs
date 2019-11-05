@@ -70,7 +70,7 @@ fn main() {
         RTT_variance: 0,
         congestion_window: 14720,
         bytes_in_flight: 0,
-        slow_start_threshold: 9999999,
+        slow_start_threshold: usize::max_value(),
         congestion_recovery_start_time: None,
 
         send_state: protocol::StreamSendState {
@@ -102,10 +102,14 @@ fn main() {
         state.resend_lost_packet_data(&buffer);
         state.send_all_in_queue();
         state.send_new_data(&buffer);
-        let received = state.receive_packet();
+        let mut received;
+        while {
+            received = state.receive_packet();
+            received
+         } {}
         if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();
-        if state.sent_end_byte_processed && state.lost_packets.len() == 0 && state.send_state.send_queue.len() == 0 { more_to_send = false; }
+        if state.sent_end_byte_processed && state.lost_packets.len() == 0 && state.send_state.send_queue.len() == 0 && state.bytes_in_flight == 0 { more_to_send = false; }
     }
     eprintln!("{:?} [completed]", Local::now());
     let mut timer = Instant::now();

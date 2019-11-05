@@ -53,7 +53,7 @@ fn main() {
         RTT_variance: 0,
         congestion_window: 14720,
         bytes_in_flight: 0,
-        slow_start_threshold: 9999999,
+        slow_start_threshold: usize::max_value(),
         congestion_recovery_start_time: None,
 
         send_state: protocol::StreamSendState {
@@ -75,7 +75,11 @@ fn main() {
 
     let mut more_to_receive = true;
     while more_to_receive {
-        let received = state.receive_packet();
+        let mut received;
+        while {
+            received = state.receive_packet();
+            received
+         } {}
         if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();
         if !received && state.assemble_remaining_data() { more_to_receive = false; }

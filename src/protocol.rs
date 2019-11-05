@@ -661,7 +661,7 @@ impl State {
     pub fn cc_on_packet_acked(&mut self, acked_packet: &SentPacket) {
         let result = self.sent_ack_largest.get(&acked_packet.packet_num);
         if result != None {
-            self.ack_starting_packet_num = result.unwrap() + 1;
+            self.ack_starting_packet_num = cmp::max(self.ack_starting_packet_num, result.unwrap() + 1);
         }
         self.bytes_in_flight -= acked_packet.size;
         if self.cc_is_in_congestion_recovery(acked_packet.time_sent) {
