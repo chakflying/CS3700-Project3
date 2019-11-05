@@ -422,7 +422,7 @@ impl State {
         }
     }
     pub fn send_new_data(&mut self, data: &Vec<u8>) {
-        if self.send_state.send_queue.len() != 0 { info!("Send queue not empty when calling send_new_data()"); return; }
+        // if self.send_state.send_queue.len() != 0 { info!("Send queue not empty when calling send_new_data()"); return; }
         while self.bytes_in_flight < self.congestion_window && !self.sent_end_byte_processed {
             self.build_new_data_packet(data);
             if self.send_a_packet_in_queue() == false {break;}
@@ -522,7 +522,7 @@ impl State {
         let packet = self.send_state.send_queue.pop_front().unwrap();
         if self.bytes_in_flight + packet.len() > self.congestion_window {
             self.send_state.send_queue.push_front(packet);
-            debug!("Queue is full, not sending any more.");
+            // debug!("Queue is full, not sending any more.");
             return false;
         }
         self.send_packet(packet);
