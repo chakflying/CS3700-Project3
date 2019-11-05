@@ -98,7 +98,6 @@ fn main() {
 
     let mut more_to_send = true;
     while more_to_send && state.closing == None {
-        debug!("Current congestion window: {}", state.congestion_window);
         state.resend_lost_packet_data(&buffer);
         state.send_all_in_queue();
         state.send_new_data(&buffer);

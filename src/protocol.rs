@@ -353,7 +353,7 @@ impl State {
             self.connected = true;
         }
         let packet = Packet::deserialize(&buf[..num_bytes_read].into());
-        debug!("Received packet size {}: {{packet_type: {:?}, packet_num: {}  Frame[0]: type: {:?}}}", num_bytes_read, packet.header.packet_type, packet.header.packet_num, packet.frames[0].frame_type);
+        debug!("Received packet size {}: {{packet_type: {:?}, packet_num: {}  Frame_type: {:?}}}", num_bytes_read, packet.header.packet_type, packet.header.packet_num, c![frame.frame_type, for frame in packet.frames.iter()]);
         let packet_num = packet.header.packet_num;
         if self.received_packets.contains_key(&packet_num) {
             return false;
@@ -473,9 +473,16 @@ impl State {
             packet_num: self.last_packet_num + 1,
         };
         let avaliable_bytes = 1472 - header.serialize().len() - 4 - (offset as u64).encode_var_vec().len();
-        if avaliable_bytes < data_segment.length { panic!("Packet does not have enough space to send this data segment"); }
+        if avaliable_bytes < data_segment.length { 
+            info!("Packet does not have enough space to send this data segment");
+            let new_segment = DataSegment {
+                byte_offset: data_segment.byte_offset + avaliable_bytes as u64,
+                length: data_segment.length - avaliable_bytes,
+            };
+            self.build_new_data_packet_from_segment(data, new_segment);
+        }
         let end = offset + data_segment.length >= data.len();
-        let data_end = cmp::min(data.len(), offset + data_segment.length);
+        let data_end = cmp::min(cmp::min(data.len(), offset + data_segment.length), offset + avaliable_bytes);
         let dataframe = DataFrame {
             end,
             byte_offset: offset as u64,
@@ -607,6 +614,7 @@ impl State {
             self.congestion_recovery_start_time = Some(Instant::now());
             self.congestion_window = (self.congestion_window as f64 * 0.5) as usize;
             self.congestion_window = cmp::max(self.congestion_window, 14720);
+            self.slow_start_threshold = self.congestion_window;
         }
     }
     pub fn get_lost_timeout(&self) -> u64 {
@@ -676,8 +684,10 @@ impl State {
         if self.congestion_window < self.slow_start_threshold {
             // in slow start
             self.congestion_window += acked_packet.size;
+            debug!("In slow start, increased congestion window to {}", self.congestion_window);
         } else {
             self.congestion_window += 1472 * (acked_packet.size / self.congestion_window);
+            debug!("In AIMD, increased congestion window to {}", self.congestion_window);
         }
     }
     pub fn cc_on_packet_lost(&mut self, lost_packet: &SentPacket) {
