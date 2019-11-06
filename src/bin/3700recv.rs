@@ -57,12 +57,9 @@ fn main() {
         smoothed_RTT: 0,
         RTT_variance: 0,
         congestion_window: 14720,
-        max_congestion_window: 14720,
-        last_max_congestion_window: 14720,
         bytes_in_flight: 0,
         slow_start_threshold: usize::max_value(),
         congestion_recovery_start_time: None,
-        last_congestion_event: None,
 
         send_state: protocol::StreamSendState {
             sent_data: HashMap::new(),
