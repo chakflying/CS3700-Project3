@@ -463,7 +463,7 @@ impl State {
         self.last_packet_num += 1;
         self.next_byte_offset += data_end - offset;
         let data_segment = DataSegment { byte_offset: offset as u64, length: data_end - offset };
-        debug!("New Data Segment used: {:?}", data_segment);
+        debug!("Constructing packet from new segment: {:?}", data_segment);
         self.send_state.sent_data.insert(header.packet_num, DataSegment { byte_offset: offset as u64, length: data_end - offset });
         self.send_state.send_queue.push_back(Packet { header, frames: vec![frame] });
         data_segment
@@ -626,7 +626,7 @@ impl State {
     pub fn get_PTO(&self) -> u64 {
         let mut output;
         if self.smoothed_RTT == 0 {
-            output = Duration::from_millis(500).as_nanos() as u64;
+            output = Duration::from_millis(100).as_nanos() as u64;
         } else {
             output = self.smoothed_RTT + cmp::max(4 * self.RTT_variance, Duration::from_millis(1).as_nanos() as u64) + Duration::from_millis(1).as_nanos() as u64;
         }
@@ -788,6 +788,7 @@ impl State {
         let mut packet = self.build_new_empty_packet();
         packet.frames.push(self.generate_close_frame());
         self.closing = Some(packet.header.packet_num);
+        debug!("Sending Close packet.");
         self.send_packet(packet);
     }
 }
