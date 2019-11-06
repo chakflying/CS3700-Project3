@@ -625,8 +625,8 @@ impl State {
             debug!("Congestion event started.");
             self.last_congestion_event = Some(Instant::now());
             self.congestion_recovery_start_time = Some(Instant::now());
+            self.max_congestion_window = self.congestion_window;
             self.set_max_congestion_windows();
-            self.max_congestion_window = (self.congestion_window as f64 * 0.8) as usize;
             self.congestion_window = (self.congestion_window as f64 * ( 1.0 + (( self.get_cubic_increase() - self.congestion_window as f64 ) / self.congestion_window as f64))) as usize;
             self.congestion_window = cmp::max(self.congestion_window, 14720);
             self.slow_start_threshold = self.congestion_window;
@@ -812,9 +812,10 @@ impl State {
     pub fn get_cubic_increase(&mut self) -> f64 {
         let time_since_last_congestion = self.last_congestion_event.unwrap().elapsed().as_nanos() as f64 * 0.000000001;
         debug!("Time elapsed: {}", time_since_last_congestion);
-        let K = (self.max_congestion_window as f64 * 0.8 / 0.4).cbrt() / 80.0;
+        let K = (self.max_congestion_window as f64 * 0.8 / 1472.0).cbrt();
         debug!("cubic root: {}", K);
-        let W = ((time_since_last_congestion - K)).powf(3.0) * 74720.0 + self.max_congestion_window as f64;
+        debug!("change: {}", ((time_since_last_congestion - K)).powf(3.0) * 8.0 );
+        let W = ((time_since_last_congestion - K)).powf(3.0) * 8.0 + self.max_congestion_window as f64;
         debug!("W: {}",W);
         W
     }
