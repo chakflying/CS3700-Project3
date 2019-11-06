@@ -493,7 +493,7 @@ impl State {
             frame_data: dataframe.serialize(),
         };
         let data_segment = DataSegment { byte_offset: offset as u64, length: data_end - offset };
-        debug!("Data Segment used: {:?}", data_segment);
+        debug!("Constructing packet from lost segment: {:?}", data_segment);
         self.last_packet_num += 1;
         self.send_state.sent_data.insert(header.packet_num, DataSegment { byte_offset: offset as u64, length: data_end - offset });
         self.send_state.send_queue.push_back(Packet { header, frames: vec![frame] });
@@ -726,7 +726,7 @@ impl State {
             } else {
                 // larger than largest ACKed, PTO timeout
                 if sent_packet.time_sent.elapsed().as_nanos() as u64 > PTO {
-                    debug!("PTO of {} triggered.", PTO);
+                    debug!("PTO of {} triggered. PTO amount: {}", PTO, self.PTO_amount);
                     PTO_triggered = true;
                     lost.push(packet_num.clone());
                 }
@@ -747,7 +747,7 @@ impl State {
     pub fn on_PTO(&mut self) {
         self.PTO_amount += 1;
         if self.PTO_amount == 4 {
-            self.congestion_window = 14720;
+            self.congestion_window = 4907;
         }
         if self.established == true { self.send_ACK(); }
     }
