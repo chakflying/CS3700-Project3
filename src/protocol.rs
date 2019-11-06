@@ -423,7 +423,7 @@ impl State {
     }
     pub fn send_new_data(&mut self, data: &Vec<u8>) {
         // if self.send_state.send_queue.len() != 0 { info!("Send queue not empty when calling send_new_data()"); return; }
-        while self.bytes_in_flight < self.congestion_window && !self.sent_end_byte_processed {
+        while self.bytes_in_flight < self.congestion_window - 1472 && !self.sent_end_byte_processed {
             self.build_new_data_packet(data);
             if self.send_a_packet_in_queue() == false {break;}
         }
@@ -461,7 +461,7 @@ impl State {
         self.last_packet_num += 1;
         self.next_byte_offset += data_end - offset;
         let data_segment = DataSegment { byte_offset: offset as u64, length: data_end - offset };
-        debug!("Data Segment used: {:?}", data_segment);
+        debug!("New Data Segment used: {:?}", data_segment);
         self.send_state.sent_data.insert(header.packet_num, DataSegment { byte_offset: offset as u64, length: data_end - offset });
         self.send_state.send_queue.push_back(Packet { header, frames: vec![frame] });
         data_segment
@@ -612,7 +612,7 @@ impl State {
             debug!("Congestion event started.");
             self.congestion_recovery_start_time = Some(Instant::now());
             self.congestion_window = (self.congestion_window as f64 * 0.5) as usize;
-            self.congestion_window = cmp::max(self.congestion_window, 14720);
+            self.congestion_window = cmp::max(self.congestion_window, 4907);
             self.slow_start_threshold = self.congestion_window;
         }
     }
@@ -728,7 +728,7 @@ impl State {
                 if sent_packet.time_sent.elapsed().as_nanos() as u64 > PTO {
                     debug!("PTO of {} triggered. PTO amount: {}", PTO, self.PTO_amount);
                     PTO_triggered = true;
-                    lost.push(packet_num.clone());
+                    // lost.push(packet_num.clone());
                 }
             }
         }
