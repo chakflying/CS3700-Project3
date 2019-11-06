@@ -119,8 +119,10 @@ fn main() {
     }
 
     while state.closing == None {
-        state.resend_lost_packet_data(&buffer);
-        if state.bytes_in_flight <= cmp::max(state.congestion_window / 10, 1472) {
+        if state.bytes_in_flight <= state.congestion_window / 2 {
+            state.resend_lost_packet_data(&buffer);
+        }
+        if state.bytes_in_flight <= 3000 {
             state.send_all_in_queue();
             state.send_new_data(&buffer);
         }
