@@ -65,6 +65,8 @@ fn main() {
         socket: socket,
 
         PTO_amount: 0,
+        last_PTO: 0,
+        last_PTO_time: None,
         max_RTT: 0,
         min_RTT: 0,
         latest_RTT: 0,

@@ -64,6 +64,8 @@ pub struct State {
     pub socket: UdpSocket,
 
     pub PTO_amount: u32,
+    pub last_PTO: u64,
+    pub last_PTO_time: Option<Instant>,
     pub max_RTT: u64,
     pub min_RTT: u64,
     pub latest_RTT: u64,
@@ -628,7 +630,9 @@ impl State {
         } else {
             output = self.smoothed_RTT + cmp::max(4 * self.RTT_variance, Duration::from_millis(1).as_nanos() as u64) + Duration::from_millis(1).as_nanos() as u64;
         }
-        output = output * (self.PTO_amount as u64 + 1);
+        if self.PTO_amount > 0 {
+            output = self.last_PTO * 2;
+        }
         output
     }
     pub fn get_new_acked_packets(&mut self, ack_frame: &AckFrame) -> Vec<SentPacket> {
@@ -728,7 +732,7 @@ impl State {
                 if sent_packet.time_sent.elapsed().as_nanos() as u64 > PTO {
                     debug!("PTO of {} triggered. PTO amount: {}", PTO, self.PTO_amount);
                     PTO_triggered = true;
-                    // lost.push(packet_num.clone());
+                    if self.established == false { lost.push(packet_num.clone()); }
                 }
             }
         }
@@ -741,10 +745,14 @@ impl State {
             self.on_packets_lost(lost_packets);
         }
         if PTO_triggered {
-            self.on_PTO();
+            if self.PTO_amount > 0 {
+                if self.last_PTO_time.unwrap().elapsed().as_nanos() as u64 > PTO { self.on_PTO(PTO); }
+            } else { self.on_PTO(PTO); }
         }
     }
-    pub fn on_PTO(&mut self) {
+    pub fn on_PTO(&mut self, PTO: u64) {
+        self.last_PTO = PTO;
+        self.last_PTO_time = Some(Instant::now());
         self.PTO_amount += 1;
         if self.PTO_amount == 4 {
             self.congestion_window = 4907;
