@@ -106,6 +106,7 @@ pub struct SentPacket {
     pub size: usize,
     pub time_sent: Instant,
     pub in_flight: bool,
+    pub is_ack_only: bool,
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -420,6 +421,11 @@ impl State {
         let packet = self.build_new_ack_packet();
         self.send_packet(packet);
     }
+    pub fn send_PTO(&mut self) {
+        let mut packet = self.build_new_ack_packet();
+        packet.frames.push(Frame {frame_type: FrameType::PING, frame_data: vec![0]});
+        self.send_packet(packet);
+    }
     pub fn send_all_in_queue(&mut self) {
         while self.bytes_in_flight < self.congestion_window && self.send_state.send_queue.len() != 0 {
             if self.send_a_packet_in_queue() == false {break;}
@@ -567,6 +573,7 @@ impl State {
             size: packet.len(),
             time_sent: Instant::now(),
             in_flight: true,
+            is_ack_only: packet.is_ack_only(),
         };
         self.sent_packets.insert(packet.header.packet_num, sent_packet.clone()); 
         self.on_packet_sent(sent_packet);
@@ -726,6 +733,7 @@ impl State {
         let mut lost = Vec::new();
         let mut lost_packets = Vec::new();
         for (packet_num, sent_packet) in self.sent_packets.iter() {
+            if sent_packet.is_ack_only { continue; }
             if packet_num < &self.sent_largest_ACKed {
                 // Less than largest ACKed, Time / Reorder threshold
                 if sent_packet.time_sent.elapsed().as_nanos() as u64 > lost_timeout || *packet_num < self.sent_largest_ACKed - 3 {
@@ -761,7 +769,7 @@ impl State {
         if self.PTO_amount == 4 {
             self.congestion_window = 14720;
         }
-        if self.established == true { self.send_ACK(); }
+        if self.established == true { self.send_PTO(); }
     }
     pub fn on_packets_lost(&mut self, lost_packets: Vec<SentPacket>) {
         for lost_packet in lost_packets.iter() {
