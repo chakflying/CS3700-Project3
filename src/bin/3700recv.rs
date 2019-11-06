@@ -78,10 +78,10 @@ fn main() {
 
     let mut more_to_receive = true;
     while more_to_receive {
-        let mut received;
+        let mut received = false;
         while {
-            received = state.receive_packet();
-            received
+            if state.receive_packet() && !received { received = true; }
+            state.receive_packet()
          } {}
         if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();

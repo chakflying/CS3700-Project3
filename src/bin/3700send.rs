@@ -15,7 +15,6 @@ extern crate pretty_env_logger;
 extern crate log;
 
 use PROJECT3::protocol;
-use PROJECT3::protocol::State;
 
 fn main() {
     pretty_env_logger::init();
@@ -88,30 +87,29 @@ fn main() {
     };
 
     let mut buffer = Vec::new();
-    io::stdin().read_to_end(&mut buffer);
+    io::stdin().read_to_end(&mut buffer).expect("Error on reading input");
 
     let mut hasher = Md5::new();
     hasher.input(&buffer);
     info!("Hash of input data: {}", hasher.result_str());
 
-    let data_segment = state.build_new_data_packet(&buffer);
+    state.build_new_data_packet(&buffer);
     state.send_a_packet_in_queue();
     while state.established == false {
-        let received = state.receive_packet();
+        state.receive_packet();
 //        if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();
         state.resend_lost_packet_data(&buffer);
     }
 
-    let mut more_to_send = true;
-    while more_to_send && state.closing == None {
+    while state.closing == None {
         state.resend_lost_packet_data(&buffer);
         state.send_all_in_queue();
         state.send_new_data(&buffer);
-        let mut received;
+        let mut received = false;
         while {
-            received = state.receive_packet();
-            received
+            if state.receive_packet() && !received { received = true; }
+            state.receive_packet()
          } {}
         if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();

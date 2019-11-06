@@ -398,11 +398,12 @@ impl State {
             match self.received_packets.get(&packet_num) {
                 None => {}
                 Some(received) => {
-                    if received.ack_sent == false && self.established == false { return true; }
+                    if received.ack_sent == false && self.established == false { debug!("Sending ACK because not established."); return true; }
                     if received.ack_sent == false && received.time_received.elapsed() > Duration::from_millis(1) {
+                        debug!("Sending ACK because max_ack_delay reached."); 
                         return true;
                     } else if received.ack_sent == false {
-                        if ack_skipped { return true; } else {
+                        if ack_skipped { debug!("Sending ACK because 2 unacked packets."); return true; } else {
                             ack_skipped = true;
                         }
                     }
@@ -412,7 +413,6 @@ impl State {
         return false;
     }
     pub fn send_ACK(&mut self) {
-        debug!("Sending ACK.");
         let packet = self.build_new_ack_packet();
         self.send_packet(packet);
     }
