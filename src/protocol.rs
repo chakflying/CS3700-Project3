@@ -730,7 +730,6 @@ impl State {
             } else {
                 // larger than largest ACKed, PTO timeout
                 if sent_packet.time_sent.elapsed().as_nanos() as u64 > PTO {
-                    debug!("PTO of {} triggered. PTO amount: {}", PTO, self.PTO_amount);
                     PTO_triggered = true;
                     if self.established == false { lost.push(packet_num.clone()); }
                 }
@@ -751,6 +750,7 @@ impl State {
         }
     }
     pub fn on_PTO(&mut self, PTO: u64) {
+        debug!("PTO of {} triggered. PTO amount: {}", PTO, self.PTO_amount);
         self.last_PTO = PTO;
         self.last_PTO_time = Some(Instant::now());
         self.PTO_amount += 1;
