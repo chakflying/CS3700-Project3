@@ -90,7 +90,7 @@ fn main() {
         if !received && state.receive_state.end_received != None && state.assemble_remaining_data() { more_to_receive = false; }
     }
     eprintln!("{:?} [completed]", Local::now());
-    print!("{}", str::from_utf8(&state.receive_state.assembled_data).unwrap());
+    io::stdout().write_all(&state.receive_state.assembled_data).unwrap();
 
     let mut hasher = Md5::new();
     hasher.input(&state.receive_state.assembled_data);
