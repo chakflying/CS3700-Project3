@@ -401,7 +401,7 @@ impl State {
                 None => {}
                 Some(received) => {
                     if received.ack_sent == false && self.established == false { debug!("Sending ACK because not established."); return true; }
-                    if received.ack_sent == false && received.time_received.elapsed() > Duration::from_millis(1) {
+                    if received.ack_sent == false && received.time_received.elapsed() > Duration::from_millis(5) {
                         debug!("Sending ACK because max_ack_delay reached."); 
                         return true;
                     } else if received.ack_sent == false {
@@ -498,7 +498,7 @@ impl State {
         debug!("Constructing packet from lost segment: {:?}", data_segment);
         self.last_packet_num += 1;
         self.send_state.sent_data.insert(header.packet_num, DataSegment { byte_offset: offset as u64, length: data_end - offset });
-        self.send_state.send_queue.push_back(Packet { header, frames: vec![frame] });
+        self.send_state.send_queue.push_front(Packet { header, frames: vec![frame] });
         data_segment
     }
     pub fn build_new_ack_packet(&mut self) -> Packet {
@@ -616,12 +616,13 @@ impl State {
             self.congestion_window = (self.congestion_window as f64 * 0.5) as usize;
             self.congestion_window = cmp::max(self.congestion_window, 4907);
             self.slow_start_threshold = self.congestion_window;
+            debug!("Congestion window reduced to {}. Bytes in flight: {}", self.congestion_window, self.bytes_in_flight);
         }
     }
     pub fn get_lost_timeout(&self) -> u64 {
         let mut output = cmp::max(self.smoothed_RTT, self.latest_RTT);
         output = cmp::max(output, Duration::from_millis(2).as_nanos() as u64);
-        (output as f64 * 9.0 / 8.0) as u64
+        (output as f64 * 9.0 / 8.0 * (1.0 + self.RTT_variance as f64 / self.smoothed_RTT as f64)) as u64
     }
     pub fn get_PTO(&self) -> u64 {
         let mut output;
@@ -680,6 +681,7 @@ impl State {
         self.bytes_in_flight -= acked_packet.size;
         if self.cc_is_in_congestion_recovery(acked_packet.time_sent) {
             if acked_packet.time_sent > self.congestion_recovery_start_time.unwrap() {
+                debug!("Out of congestion recovery.");
                 self.congestion_recovery_start_time = None;
             }
             return;
@@ -724,7 +726,7 @@ impl State {
         for (packet_num, sent_packet) in self.sent_packets.iter() {
             if packet_num < &self.sent_largest_ACKed {
                 // Less than largest ACKed, Time / Reorder threshold
-                if sent_packet.time_sent.elapsed().as_nanos() as u64 > lost_timeout || *packet_num < self.sent_largest_ACKed - 5 {
+                if sent_packet.time_sent.elapsed().as_nanos() as u64 > lost_timeout || *packet_num < self.sent_largest_ACKed - 3 {
                     lost.push(packet_num.clone());
                 }
             } else {

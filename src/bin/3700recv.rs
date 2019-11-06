@@ -80,21 +80,17 @@ fn main() {
 
     let mut more_to_receive = true;
     while more_to_receive {
-        let mut received = false;
-        while {
-            if state.receive_packet() && !received { received = true; }
-            state.receive_packet()
-         } {}
+        let received = state.receive_packet();
         if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();
         if !received && state.receive_state.end_received != None && state.assemble_remaining_data() { more_to_receive = false; }
     }
     eprintln!("{:?} [completed]", Local::now());
-    io::stdout().write_all(&state.receive_state.assembled_data).unwrap();
 
     let mut hasher = Md5::new();
     hasher.input(&state.receive_state.assembled_data);
     info!("Hash of received data: {}", hasher.result_str());
+    io::stdout().write_all(&state.receive_state.assembled_data).unwrap();
 
     let mut timer = Instant::now();
     let mut close_attempt = 0;

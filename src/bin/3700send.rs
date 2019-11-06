@@ -4,7 +4,8 @@ use std::collections::{HashMap, VecDeque};
 use std::cmp;
 use chrono::prelude::*;
 use rand::Rng;
-use clap::{App, Arg};
+extern crate clap;
+use clap::{Arg, App};
 use std::time::{Duration, Instant};
 extern crate crypto;
 use crypto::md5::Md5;
@@ -28,8 +29,17 @@ fn main() {
                 .required(true)
                 .help("The receiver to connect to"),
         )
+        .arg(
+            Arg::with_name("random bytes")
+            .short("r")
+            .long("random")
+            .required(false)
+            .takes_value(true)
+            .help("Generate random bytes as input"),
+        )
         .get_matches();
     let client = args.value_of("client").unwrap();
+    let random = args.value_of("random bytes").unwrap_or("none");
     let client_ip = &client[0..client.find(":").expect("Argument Incorrect formatting")];
     let client_port = &client[client.find(":").unwrap() + 1..];
 
@@ -89,11 +99,15 @@ fn main() {
     };
 
     let mut buffer = Vec::new();
-    io::stdin().read_to_end(&mut buffer).expect("Error on reading input");
+    if random != "none" {
+        let length:u32 = random.parse().unwrap();
+        buffer = (0..length).map(|_| { rand::random::<u8>() }).collect();
+    } else {
+        io::stdin().read_to_end(&mut buffer).expect("Error on reading input");
+    }
 
     let mut hasher = Md5::new();
     hasher.input(&buffer);
-    info!("Hash of input data: {}", hasher.result_str());
 
     state.build_new_data_packet(&buffer);
     state.send_a_packet_in_queue();
@@ -106,18 +120,17 @@ fn main() {
 
     while state.closing == None {
         state.resend_lost_packet_data(&buffer);
-        state.send_all_in_queue();
-        state.send_new_data(&buffer);
-        let mut received = false;
-        while {
-            if state.receive_packet() && !received { received = true; }
-            state.receive_packet()
-         } {}
+        if state.bytes_in_flight <= cmp::max(state.congestion_window / 10, 1472) {
+            state.send_all_in_queue();
+            state.send_new_data(&buffer);
+        }
+        let received = state.receive_packet();
         if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();
         // if state.sent_end_byte_processed && state.lost_packets.len() == 0 && state.send_state.send_queue.len() == 0 && state.bytes_in_flight == 0 { more_to_send = false; }
     }
     eprintln!("{:?} [completed]", Local::now());
+    info!("Hash of input data: {}", hasher.result_str());
     let mut timer = Instant::now();
     let mut close_attempt = 0;
     while state.connected && close_attempt < 3 {
