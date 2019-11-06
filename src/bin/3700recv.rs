@@ -85,7 +85,7 @@ fn main() {
          } {}
         if !received && state.should_send_ACK() { state.send_ACK(); }
         state.detect_packet_lost();
-        if !received && state.assemble_remaining_data() { more_to_receive = false; }
+        if !received && state.receive_state.end_received != None && state.assemble_remaining_data() { more_to_receive = false; }
     }
     eprintln!("{:?} [completed]", Local::now());
     print!("{}", str::from_utf8(&state.receive_state.assembled_data).unwrap());

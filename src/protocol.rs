@@ -445,7 +445,7 @@ impl State {
             packet_type: if self.established == true { PacketType::NORM } else { PacketType::INIT },
             packet_num: self.last_packet_num + 1,
         };
-        let avaliable_bytes = 1472 - header.serialize().len() - 6 - (offset as u64).encode_var_vec().len();
+        let avaliable_bytes = 1472 - header.serialize().len() - 4 - (offset as u64).encode_var_vec().len();
         let end = offset + avaliable_bytes >= data.len();
         if end { self.sent_end_byte_processed = true; }
         let data_end = cmp::min(data.len(), offset + avaliable_bytes);
@@ -618,8 +618,8 @@ impl State {
     }
     pub fn get_lost_timeout(&self) -> u64 {
         let mut output = cmp::max(self.smoothed_RTT, self.latest_RTT);
-        output = cmp::max(output, Duration::from_millis(1).as_nanos() as u64);
-        Duration::from_nanos(output * 9 / 8).as_nanos() as u64
+        output = cmp::max(output, Duration::from_millis(2).as_nanos() as u64);
+        (output as f64 * 9.0 / 8.0) as u64
     }
     pub fn get_PTO(&self) -> u64 {
         let mut output;
@@ -703,13 +703,13 @@ impl State {
         }
         self.min_RTT = cmp::min(self.min_RTT, self.latest_RTT);
         // Limit ack_delay by max_ack_delay
-        ack_delay = cmp::min(ack_delay, Duration::from_millis(1).as_nanos() as u64);
+        ack_delay = cmp::min(ack_delay, Duration::from_millis(2).as_nanos() as u64);
         // Adjust for ack delay if plausible.
         let adjusted_RTT = if self.latest_RTT > self.min_RTT + ack_delay { self.latest_RTT - ack_delay } else { self.latest_RTT };
 
         self.RTT_variance = (3.0 / 4.0 * self.RTT_variance as f64 + 1.0 / 4.0 * (self.smoothed_RTT as i64 - adjusted_RTT as i64).abs() as f64) as u64;
         self.smoothed_RTT = (7.0 / 8.0 * self.smoothed_RTT as f64 + 1.0 / 8.0 * adjusted_RTT as f64) as u64;
-        debug!("Updating RTT. latest RTT: {}, adjusted: {}, smoothed: {}", self.latest_RTT, adjusted_RTT, self.smoothed_RTT);
+        debug!("Updating RTT. latest RTT: {}, adjusted: {}, smoothed: {}, variance: {}", self.latest_RTT, adjusted_RTT, self.smoothed_RTT, self.RTT_variance);
     }
     pub fn detect_packet_lost(&mut self) {
         let lost_timeout = self.get_lost_timeout();
@@ -720,7 +720,7 @@ impl State {
         for (packet_num, sent_packet) in self.sent_packets.iter() {
             if packet_num < &self.sent_largest_ACKed {
                 // Less than largest ACKed, Time / Reorder threshold
-                if sent_packet.time_sent.elapsed().as_nanos() as u64 > lost_timeout || *packet_num < self.sent_largest_ACKed - 3 {
+                if sent_packet.time_sent.elapsed().as_nanos() as u64 > lost_timeout || *packet_num < self.sent_largest_ACKed - 5 {
                     lost.push(packet_num.clone());
                 }
             } else {
