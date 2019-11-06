@@ -72,9 +72,12 @@ pub struct State {
     pub smoothed_RTT: u64,
     pub RTT_variance: u64,
     pub congestion_window: usize,
+    pub max_congestion_window: usize,
+    pub last_max_congestion_window: usize,
     pub bytes_in_flight: usize,
     pub slow_start_threshold: usize,
     pub congestion_recovery_start_time: Option<Instant>,
+    pub last_congestion_event: Option<Instant>,
 
     pub send_state: StreamSendState,
     pub receive_state: StreamReceiveState,
@@ -620,8 +623,11 @@ impl State {
     pub fn congestion_event(&mut self, sent_time: Instant) {
         if !self.cc_is_in_congestion_recovery(sent_time) {
             debug!("Congestion event started.");
+            self.last_congestion_event = Some(Instant::now());
             self.congestion_recovery_start_time = Some(Instant::now());
-            self.congestion_window = (self.congestion_window as f64 * 0.7) as usize;
+            self.set_max_congestion_windows();
+            self.max_congestion_window = (self.congestion_window as f64 * 0.8) as usize;
+            self.congestion_window = (self.congestion_window as f64 * ( 1.0 + (( self.get_cubic_increase() - self.congestion_window as f64 ) / self.congestion_window as f64))) as usize;
             self.congestion_window = cmp::max(self.congestion_window, 14720);
             self.slow_start_threshold = self.congestion_window;
             debug!("Congestion window reduced to {}. Bytes in flight: {}", self.congestion_window, self.bytes_in_flight);
@@ -700,7 +706,7 @@ impl State {
             self.congestion_window += acked_packet.size;
             debug!("In slow start, increased congestion window to {}", self.congestion_window);
         } else {
-            self.congestion_window += (1472.0 * (acked_packet.size as f64 / self.congestion_window as f64)) as usize;
+            self.congestion_window = (self.congestion_window as f64 * ( 1.0 + (( self.get_cubic_increase() - self.congestion_window as f64 ) / self.congestion_window as f64))) as usize;
             debug!("In AIMD, increased congestion window to {}", self.congestion_window);
         }
     }
@@ -802,5 +808,23 @@ impl State {
         self.closing = Some(packet.header.packet_num);
         debug!("Sending Close packet.");
         self.send_packet(packet);
+    }
+    pub fn get_cubic_increase(&mut self) -> f64 {
+        let time_since_last_congestion = self.last_congestion_event.unwrap().elapsed().as_nanos() as f64 * 0.000000001;
+        debug!("Time elapsed: {}", time_since_last_congestion);
+        let K = (self.max_congestion_window as f64 * 0.8 / 0.4).cbrt() / 80.0;
+        debug!("cubic root: {}", K);
+        let W = ((time_since_last_congestion - K)).powf(3.0) * 74720.0 + self.max_congestion_window as f64;
+        debug!("W: {}",W);
+        W
+    }
+    pub fn set_max_congestion_windows(&mut self) {
+        if self.max_congestion_window < self.last_max_congestion_window {
+            self.last_max_congestion_window = self.max_congestion_window;
+            self.max_congestion_window = (self.max_congestion_window as f64 * (2.0 - 0.2) / 2.0) as usize;
+        } else {
+            self.last_max_congestion_window = self.max_congestion_window;
+        }
+
     }
 }
