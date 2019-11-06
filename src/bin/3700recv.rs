@@ -56,7 +56,7 @@ fn main() {
         latest_RTT: 0,
         smoothed_RTT: 0,
         RTT_variance: 0,
-        congestion_window: 4907,
+        congestion_window: 14720,
         bytes_in_flight: 0,
         slow_start_threshold: usize::max_value(),
         congestion_recovery_start_time: None,

@@ -113,6 +113,7 @@ pub struct ReceivedPacket {
     pub packet_num: u64,
     pub time_received: Instant,
     pub ack_sent: bool,
+    pub is_ack_only: bool,
 }
 
 bitflags! {
@@ -363,7 +364,7 @@ impl State {
             self.time_of_last_packet_reorder = Some(Instant::now());
         }
         if self.received_largest < packet_num { self.received_largest = packet_num; }
-        self.received_packets.insert(packet_num, ReceivedPacket { packet_num, time_received: Instant::now(), ack_sent: false });
+        self.received_packets.insert(packet_num, ReceivedPacket { packet_num, time_received: Instant::now(), ack_sent: false, is_ack_only: packet.is_ack_only() });
         self.time_of_last_received_packet = Some(Instant::now());
         if packet.header.packet_type == PacketType::INIT {
             self.initial_received_packet_num = packet_num;
@@ -383,7 +384,7 @@ impl State {
                 let mut packet = self.build_new_ack_packet();
                 packet.frames.push(self.generate_close_frame());
                 self.closing = Some(packet.header.packet_num);
-                self.send_packet(packet);
+                self.send_packet(packet, false);
                 return true;
             }
         }
@@ -400,6 +401,7 @@ impl State {
             match self.received_packets.get(&packet_num) {
                 None => {}
                 Some(received) => {
+                    if received.is_ack_only { return false; }
                     if received.ack_sent == false && self.established == false { debug!("Sending ACK because not established."); return true; }
                     if received.ack_sent == false && received.time_received.elapsed() > Duration::from_millis(5) {
                         debug!("Sending ACK because max_ack_delay reached."); 
@@ -416,7 +418,7 @@ impl State {
     }
     pub fn send_ACK(&mut self) {
         let packet = self.build_new_ack_packet();
-        self.send_packet(packet);
+        self.send_packet(packet, true);
     }
     pub fn send_all_in_queue(&mut self) {
         while self.bytes_in_flight < self.congestion_window && self.send_state.send_queue.len() != 0 {
@@ -527,7 +529,7 @@ impl State {
             // debug!("Queue is full, not sending any more.");
             return false;
         }
-        self.send_packet(packet);
+        self.send_packet(packet, false);
         return true;
     }
     pub fn generate_ackframe(&mut self) -> AckFrame {
@@ -558,7 +560,7 @@ impl State {
             ack_ranges,
         }
     }
-    pub fn send_packet(&mut self, packet: Packet) {
+    pub fn send_packet(&mut self, packet: Packet, no_ack: bool) {
         if !self.connected { return; }
         let sent_packet = SentPacket {
             packet_num: packet.header.packet_num,
@@ -566,16 +568,17 @@ impl State {
             time_sent: Instant::now(),
             in_flight: true,
         };
-        self.sent_packets.insert(packet.header.packet_num, sent_packet.clone());
+        if !no_ack {
+            self.sent_packets.insert(packet.header.packet_num, sent_packet.clone()); 
+        }
+        self.on_packet_sent(sent_packet);
         let packet_bytes = packet.serialize();
         debug!("Sending packet of size {}.", packet_bytes.len());
         self.socket.send(&packet_bytes).expect("Send Failed");
-        self.on_packet_sent(sent_packet);
     }
     pub fn on_packet_sent(&mut self, sent_packet: SentPacket) {
         self.time_of_last_sent_new_packet = Some(Instant::now());
         self.cc_on_packet_sent(sent_packet.size);
-        self.sent_packets.insert(sent_packet.packet_num, sent_packet);
     }
     pub fn on_data_received(&mut self, data_frame: &DataFrame) {
         debug!("Processing DataFrame: {{ end:{}, offset:{} }}", data_frame.end, data_frame.byte_offset);
@@ -613,8 +616,8 @@ impl State {
         if !self.cc_is_in_congestion_recovery(sent_time) {
             debug!("Congestion event started.");
             self.congestion_recovery_start_time = Some(Instant::now());
-            self.congestion_window = (self.congestion_window as f64 * 0.5) as usize;
-            self.congestion_window = cmp::max(self.congestion_window, 4907);
+            self.congestion_window = (self.congestion_window as f64 * 0.7) as usize;
+            self.congestion_window = cmp::max(self.congestion_window, 14720);
             self.slow_start_threshold = self.congestion_window;
             debug!("Congestion window reduced to {}. Bytes in flight: {}", self.congestion_window, self.bytes_in_flight);
         }
@@ -757,7 +760,7 @@ impl State {
         self.last_PTO_time = Some(Instant::now());
         self.PTO_amount += 1;
         if self.PTO_amount == 4 {
-            self.congestion_window = 4907;
+            self.congestion_window = 14720;
         }
         if self.established == true { self.send_ACK(); }
     }
@@ -791,6 +794,6 @@ impl State {
         packet.frames.push(self.generate_close_frame());
         self.closing = Some(packet.header.packet_num);
         debug!("Sending Close packet.");
-        self.send_packet(packet);
+        self.send_packet(packet, false);
     }
 }
