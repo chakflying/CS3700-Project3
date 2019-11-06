@@ -393,7 +393,7 @@ impl State {
     pub fn should_send_ACK(&mut self) -> bool {
         let mut ack_skipped = false;
         if self.received_largest == 0 || self.connected == false { return false; }
-        if self.time_of_last_packet_reorder != None && (self.time_of_last_packet_reorder.unwrap().elapsed().as_nanos() as u64) < (1 / 8 * self.smoothed_RTT) { return true; }
+        if self.time_of_last_packet_reorder != None && (self.time_of_last_packet_reorder.unwrap().elapsed().as_nanos() as u64) < (1 / 8 * self.smoothed_RTT) { debug!("Sending ACK because of packet reorder."); return true; }
         for packet_num in c![x, for x in self.ack_starting_packet_num..self.received_largest+1] {
             match self.received_packets.get(&packet_num) {
                 None => {}

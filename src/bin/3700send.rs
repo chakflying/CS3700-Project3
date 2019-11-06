@@ -119,7 +119,7 @@ fn main() {
     let mut timer = Instant::now();
     let mut close_attempt = 0;
     while state.connected && close_attempt < 3 {
-        state.receive_packet();
+        while {state.receive_packet()} {}
         if timer.elapsed() > cmp::max(2 * Duration::from_nanos(state.smoothed_RTT), Duration::from_millis(100)) {
             state.send_close_packet();
             close_attempt += 1;
