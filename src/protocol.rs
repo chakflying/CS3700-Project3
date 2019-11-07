@@ -813,6 +813,10 @@ impl State {
         self.send_packet(packet);
     }
     pub fn estimate_bandWidth(&self) -> u64 {
-        self.max_congestion_window as u64 * 100000000 / ((self.min_RTT + self.smoothed_RTT) / 2)
+        if self.min_RTT == 0 {
+            14720 * 100000000 / Duration::from_millis(100).as_nanos() as u64
+        } else {
+            self.max_congestion_window as u64 * 100000000 / ((self.min_RTT + self.smoothed_RTT) / 2)
+        }
     }
 }
