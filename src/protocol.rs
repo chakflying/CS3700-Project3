@@ -585,7 +585,7 @@ impl State {
         let packet_bytes = packet.serialize();
         debug!("Sending packet of size {}.", packet_bytes.len());
         self.socket.send(&packet_bytes).expect("Send Failed");
-        debug!("Send complete.");
+        // debug!("Send complete.");
         self.packet_sent += 1;
     }
     pub fn on_packet_sent(&mut self, sent_packet: SentPacket) {
@@ -814,7 +814,7 @@ impl State {
                 let data_segment = data_segment.unwrap();
                 self.build_new_data_packet_from_segment(data, data_segment);
             }
-            self.send_a_packet_in_queue();
+            if !self.send_a_packet_in_queue() { break; }
         }
     }
     pub fn generate_close_frame(&self) -> Frame {
