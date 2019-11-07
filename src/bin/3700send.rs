@@ -116,7 +116,7 @@ fn main() {
     }
 
     while state.closing == None {
-        if state.bytes_in_flight <= state.congestion_window / 2 {
+        if state.bytes_in_flight <= state.congestion_window {
             state.resend_lost_packet_data(&buffer);
         }
         if state.bytes_in_flight <= 3000 {
