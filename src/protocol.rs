@@ -648,7 +648,7 @@ impl State {
         } else {
             output = self.smoothed_RTT + cmp::max(4 * self.RTT_variance, Duration::from_millis(1).as_nanos() as u64) + Duration::from_millis(1).as_nanos() as u64;
         }
-        if self.PTO_amount > 0 {
+        if self.PTO_amount > 0  && self.PTO_amount < 4 {
             output = self.last_PTO * 2;
         }
         output
@@ -780,7 +780,7 @@ impl State {
         if self.PTO_amount == 4 {
             self.congestion_window = 14720;
         }
-        if self.established == true { self.send_PTO(); }
+        if self.established == true { self.send_PTO(); self.send_PTO(); }
     }
     pub fn on_packets_lost(&mut self, lost_packets: Vec<SentPacket>) {
         for lost_packet in lost_packets.iter() {
