@@ -686,7 +686,10 @@ impl State {
         if self.receive_state.end_received != None && self.receive_state.end_received.unwrap() == self.receive_state.assembled_data.len() as u64 {
             debug!("Data reported as complete.");
             return true;
-        } else { return false; }
+        } else { 
+            debug!("Assemble data failed, latest offset: {}", self.receive_state.assembled_data.len());
+            return false; 
+            }
     }
     /// Reference from QUIC RFC. https://quicwg.org/base-drafts/draft-ietf-quic-recovery.html
     pub fn cc_is_in_congestion_recovery(&self, time: Instant) -> bool {
