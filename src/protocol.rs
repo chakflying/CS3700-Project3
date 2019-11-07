@@ -756,6 +756,7 @@ impl State {
         let mut lost = Vec::new();
         let mut lost_packets = Vec::new();
         for (packet_num, sent_packet) in self.sent_packets.iter() {
+            if sent_packet.is_ack_only { continue; }
             if packet_num < &self.sent_largest_ACKed {
                 // Less than largest ACKed, Time / Reorder threshold
                 if !sent_packet.is_ack_only && sent_packet.time_sent.elapsed().as_nanos() as u64 > lost_timeout || *packet_num < self.sent_largest_ACKed - 3 {
@@ -829,7 +830,7 @@ impl State {
         if self.min_RTT == 0 {
             14720 * 100000000 / Duration::from_millis(100).as_nanos() as u64
         } else {
-            self.max_congestion_window as u64 * 100000000 / self.min_RTT
+            self.max_congestion_window as u64 * 100000000 / self.min_RTT / 2
         }
     }
 }
