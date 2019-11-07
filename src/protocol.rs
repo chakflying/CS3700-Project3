@@ -385,6 +385,7 @@ impl State {
                 self.on_ack_received(&ackframe);
             } else if frame.frame_type == FrameType::CLOSE {
                 if self.closing != None { self.connected = false; return true; }
+                debug!("Received close, sending ACK, CLOSE in return.");
                 let mut packet = self.build_new_ack_packet();
                 packet.frames.push(self.generate_close_frame());
                 self.closing = Some(packet.header.packet_num);
@@ -583,6 +584,7 @@ impl State {
         let packet_bytes = packet.serialize();
         debug!("Sending packet of size {}.", packet_bytes.len());
         self.socket.send(&packet_bytes).expect("Send Failed");
+        debug!("Send complete.");
         self.packet_sent += 1;
     }
     pub fn on_packet_sent(&mut self, sent_packet: SentPacket) {
