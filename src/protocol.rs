@@ -628,7 +628,7 @@ impl State {
         if !self.cc_is_in_congestion_recovery(sent_time) {
             debug!("Congestion event started.");
             self.congestion_recovery_start_time = Some(Instant::now());
-            if self.min_RTT != 0 {
+            if self.smoothed_RTT != 0 && self.min_RTT != 0 {
                 debug!("Estimated bandwidth: {}, estimated current throughput: {}",self.estimate_bandWidth(), self.congestion_window as u64 * 100000000 / self.smoothed_RTT);
                 if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 >= self.estimate_bandWidth() as f64 {
                     self.congestion_window = (self.congestion_window as f64 * 0.6) as usize;
@@ -689,7 +689,7 @@ impl State {
         } else { 
             debug!("Assemble data failed, latest offset: {}", self.receive_state.assembled_data.len());
             return false; 
-            }
+        }
     }
     /// Reference from QUIC RFC. https://quicwg.org/base-drafts/draft-ietf-quic-recovery.html
     pub fn cc_is_in_congestion_recovery(&self, time: Instant) -> bool {
