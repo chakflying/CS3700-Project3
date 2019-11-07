@@ -631,9 +631,9 @@ impl State {
             if self.min_RTT != 0 {
                 debug!("Estimated bandwidth: {}, estimated current throughput: {}",self.estimate_bandWidth(), self.congestion_window as u64 * 100000000 / self.smoothed_RTT);
                 if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 >= self.estimate_bandWidth() as f64 {
-                    self.congestion_window = (self.congestion_window as f64 * 0.7) as usize;
+                    self.congestion_window = (self.congestion_window as f64 * 0.6) as usize;
                 } else {
-                    self.congestion_window = (self.congestion_window as f64 * 0.9) as usize;
+                    self.congestion_window = (self.congestion_window as f64 * 0.8) as usize;
                 }
             }
             self.congestion_window = cmp::max(self.congestion_window, 14720);
@@ -756,7 +756,7 @@ impl State {
         let mut lost = Vec::new();
         let mut lost_packets = Vec::new();
         for (packet_num, sent_packet) in self.sent_packets.iter() {
-            if sent_packet.is_ack_only { continue; }
+            // if sent_packet.is_ack_only { continue; }
             if packet_num < &self.sent_largest_ACKed {
                 // Less than largest ACKed, Time / Reorder threshold
                 if !sent_packet.is_ack_only && sent_packet.time_sent.elapsed().as_nanos() as u64 > lost_timeout || *packet_num < self.sent_largest_ACKed - 3 {
