@@ -681,7 +681,7 @@ impl State {
     }
     pub fn assemble_remaining_data(&mut self) -> bool {
         while self.receive_state.received_data.contains_key(&(self.receive_state.assembled_data.len() as u64)) {
-            self.receive_state.assembled_data.extend(self.receive_state.received_data.get(&(self.receive_state.assembled_data.len() as u64)).unwrap().clone());
+            self.receive_state.assembled_data.extend(self.receive_state.received_data.get(&(self.receive_state.assembled_data.len() as u64)).unwrap());
         }
         if self.receive_state.end_received != None && self.receive_state.end_received.unwrap() == self.receive_state.assembled_data.len() as u64 {
             debug!("Data reported as complete.");
