@@ -646,7 +646,7 @@ impl State {
     pub fn get_PTO(&self) -> u64 {
         let mut output;
         if self.smoothed_RTT == 0 {
-            output = Duration::from_millis(600).as_nanos() as u64;
+            output = Duration::from_millis(1000).as_nanos() as u64;
         } else {
             output = self.smoothed_RTT + cmp::max(4 * self.RTT_variance, Duration::from_millis(1).as_nanos() as u64) + Duration::from_millis(1).as_nanos() as u64;
         }
