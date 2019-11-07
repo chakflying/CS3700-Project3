@@ -14,6 +14,8 @@ Rust proved to be a difficult language to do fast iteration on, as the rigidness
 
 ## Testing
 
+Code is tested locally first on Windows, then on the gordon machine. The optional -r command line argument generates random bytes as input data instead of using stdin, providing more convenient testing. Providing environment variable RUST_LOG=debug enables detailed logging of the sending and receiving status.
+
 ## External Libraries Used
 
 integer-encoding: for variable length integer encodings, used in packet numbers
