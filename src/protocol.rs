@@ -653,9 +653,10 @@ impl State {
         } else {
             output = self.smoothed_RTT + cmp::max(4 * self.RTT_variance, Duration::from_millis(1).as_nanos() as u64) + Duration::from_millis(1).as_nanos() as u64;
         }
-        if self.PTO_amount > 0  && self.PTO_amount < 2 {
+        if self.PTO_amount > 0  && self.PTO_amount < 3 {
             output = self.last_PTO * 2;
         }
+        output = cmp::max(output, Duration::from_millis(1200).as_nanos() as u64);
         output
     }
     pub fn get_new_acked_packets(&mut self, ack_frame: &AckFrame) -> Vec<SentPacket> {
