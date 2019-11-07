@@ -73,11 +73,11 @@ pub struct State {
     pub RTT_variance: u64,
     pub congestion_window: usize,
     pub max_congestion_window: usize,
-    pub last_max_congestion_window: usize,
     pub bytes_in_flight: usize,
     pub slow_start_threshold: usize,
     pub congestion_recovery_start_time: Option<Instant>,
-    pub last_congestion_event: Option<Instant>,
+    pub packet_sent: u64,
+    pub packet_lost: u64,
 
     pub send_state: StreamSendState,
     pub receive_state: StreamReceiveState,
@@ -583,6 +583,7 @@ impl State {
         let packet_bytes = packet.serialize();
         debug!("Sending packet of size {}.", packet_bytes.len());
         self.socket.send(&packet_bytes).expect("Send Failed");
+        self.packet_sent += 1;
     }
     pub fn on_packet_sent(&mut self, sent_packet: SentPacket) {
         self.time_of_last_sent_new_packet = Some(Instant::now());
@@ -623,11 +624,11 @@ impl State {
     pub fn congestion_event(&mut self, sent_time: Instant) {
         if !self.cc_is_in_congestion_recovery(sent_time) {
             debug!("Congestion event started.");
-            self.last_congestion_event = Some(Instant::now());
             self.congestion_recovery_start_time = Some(Instant::now());
-            self.max_congestion_window = self.congestion_window;
-            self.set_max_congestion_windows();
-            self.congestion_window = (self.congestion_window as f64 * ( 1.0 + (( self.get_cubic_increase() - self.congestion_window as f64 ) / self.congestion_window as f64))) as usize;
+            debug!("Estimated bandwidth: {}, estimated current throughput: {}",self.estimate_bandWidth(), self.congestion_window as u64 * 100000000 / self.smoothed_RTT);
+            if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 >= self.estimate_bandWidth() as f64 * 0.5 {
+                self.congestion_window = (self.congestion_window as f64 * 0.8) as usize;
+            }
             self.congestion_window = cmp::max(self.congestion_window, 14720);
             self.slow_start_threshold = self.congestion_window;
             debug!("Congestion window reduced to {}. Bytes in flight: {}", self.congestion_window, self.bytes_in_flight);
@@ -706,11 +707,13 @@ impl State {
             self.congestion_window += acked_packet.size;
             debug!("In slow start, increased congestion window to {}", self.congestion_window);
         } else {
-            self.congestion_window = (self.congestion_window as f64 * ( 1.0 + (( self.get_cubic_increase() - self.congestion_window as f64 ) / self.congestion_window as f64))) as usize;
+            self.congestion_window += (1472.0 * (acked_packet.size as f64 / self.congestion_window as f64)) as usize;
             debug!("In AIMD, increased congestion window to {}", self.congestion_window);
         }
+        if self.congestion_window > self.max_congestion_window { self.max_congestion_window = self.congestion_window; }
     }
     pub fn cc_on_packet_lost(&mut self, lost_packet: &SentPacket) {
+        self.packet_lost += 1;
         self.bytes_in_flight -= lost_packet.size;
         self.sent_largest_lost = cmp::max(self.sent_largest_lost, lost_packet.packet_num);
         self.congestion_event(lost_packet.time_sent);
@@ -809,23 +812,7 @@ impl State {
         debug!("Sending Close packet.");
         self.send_packet(packet);
     }
-    pub fn get_cubic_increase(&mut self) -> f64 {
-        let time_since_last_congestion = self.last_congestion_event.unwrap().elapsed().as_nanos() as f64 * 0.000000001;
-        debug!("Time elapsed: {}", time_since_last_congestion);
-        let K = (self.max_congestion_window as f64 * 0.8 / 1472.0).cbrt();
-        debug!("cubic root: {}", K);
-        debug!("change: {}", ((time_since_last_congestion - K)).powf(3.0) * 8.0 );
-        let W = ((time_since_last_congestion - K)).powf(3.0) * 8.0 + self.max_congestion_window as f64;
-        debug!("W: {}",W);
-        W
-    }
-    pub fn set_max_congestion_windows(&mut self) {
-        if self.max_congestion_window < self.last_max_congestion_window {
-            self.last_max_congestion_window = self.max_congestion_window;
-            self.max_congestion_window = (self.max_congestion_window as f64 * (2.0 - 0.2) / 2.0) as usize;
-        } else {
-            self.last_max_congestion_window = self.max_congestion_window;
-        }
-
+    pub fn estimate_bandWidth(&self) -> u64 {
+        self.max_congestion_window as u64 * 100000000 / ((self.min_RTT + self.smoothed_RTT) / 2)
     }
 }
