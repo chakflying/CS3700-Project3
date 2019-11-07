@@ -627,7 +627,7 @@ impl State {
             self.congestion_recovery_start_time = Some(Instant::now());
             if self.min_RTT != 0 {
                 debug!("Estimated bandwidth: {}, estimated current throughput: {}",self.estimate_bandWidth(), self.congestion_window as u64 * 100000000 / self.smoothed_RTT);
-                if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 >= self.estimate_bandWidth() as f64 * 0.5 {
+                if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 >= self.estimate_bandWidth() as f64 {
                     self.congestion_window = (self.congestion_window as f64 * 0.7) as usize;
                 } else {
                     self.congestion_window = (self.congestion_window as f64 * 0.9) as usize;
