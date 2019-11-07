@@ -706,7 +706,7 @@ impl State {
             return;
         }
         if acked_packet.size <= 20 { return; }
-        if self.min_RTT != 0 {
+        if self.smoothed_RTT != 0 && self.min_RTT != 0 {
             debug!("Estimated bandwidth: {}, estimated current throughput: {}",self.estimate_bandWidth(), self.congestion_window as u64 * 100000000 / self.smoothed_RTT);
             if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 <= self.estimate_bandWidth() as f64 * 0.8 {
                 self.congestion_window += (1472.0 * (acked_packet.size as f64 / self.congestion_window as f64)) as usize;
