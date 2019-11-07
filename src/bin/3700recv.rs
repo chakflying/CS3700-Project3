@@ -5,9 +5,6 @@ use std::collections::{HashMap, VecDeque};
 use std::io::{self, Read, Write};
 use std::{str, cmp};
 use std::time::{Duration, Instant};
-extern crate crypto;
-use crypto::md5::Md5;
-use crypto::digest::Digest;
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -90,9 +87,6 @@ fn main() {
     }
     eprintln!("{:?} [completed]", Local::now());
 
-    let mut hasher = Md5::new();
-    hasher.input(&state.receive_state.assembled_data);
-    info!("Hash of received data: {}", hasher.result_str());
     io::stdout().write_all(&state.receive_state.assembled_data).unwrap();
 
     let mut timer = Instant::now();

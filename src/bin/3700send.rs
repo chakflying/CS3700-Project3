@@ -7,9 +7,6 @@ use rand::Rng;
 extern crate clap;
 use clap::{Arg, App};
 use std::time::{Duration, Instant};
-extern crate crypto;
-use crypto::md5::Md5;
-use crypto::digest::Digest;
 
 extern crate pretty_env_logger;
 #[macro_use]
@@ -109,9 +106,6 @@ fn main() {
         io::stdin().read_to_end(&mut buffer).expect("Error on reading input");
     }
 
-    let mut hasher = Md5::new();
-    hasher.input(&buffer);
-
     state.build_new_data_packet(&buffer);
     state.send_a_packet_in_queue();
     while state.established == false {
@@ -135,7 +129,7 @@ fn main() {
         // if state.sent_end_byte_processed && state.lost_packets.len() == 0 && state.send_state.send_queue.len() == 0 && state.bytes_in_flight == 0 { more_to_send = false; }
     }
     eprintln!("{:?} [completed]", Local::now());
-    info!("Hash of input data: {}", hasher.result_str());
+
     let mut timer = Instant::now();
     let mut close_attempt = 0;
     while state.connected && close_attempt < 3 {
