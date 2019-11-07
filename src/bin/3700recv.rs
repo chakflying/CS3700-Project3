@@ -90,8 +90,9 @@ fn main() {
     io::stdout().write_all(&state.receive_state.assembled_data).unwrap();
 
     let mut timer = Instant::now();
-    let mut close_attempt = 0;
-    while state.connected && close_attempt < 2 {
+    let mut close_attempt = 1;
+    state.send_close_packet();
+    while state.connected && close_attempt < 3 {
         while {state.receive_packet()} {}
         if timer.elapsed() > cmp::max(2 * Duration::from_nanos(state.smoothed_RTT), Duration::from_millis(100)) {
             state.send_close_packet();

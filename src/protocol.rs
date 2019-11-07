@@ -346,8 +346,8 @@ impl State {
             Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => None,
             Err(e) => {
                 error!("IO error occurred: {}", e);
-                None
-                // std::process::exit(0);
+                // None
+                std::process::exit(0);
             }
         };
         if result != None {
