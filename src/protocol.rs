@@ -625,9 +625,11 @@ impl State {
         if !self.cc_is_in_congestion_recovery(sent_time) {
             debug!("Congestion event started.");
             self.congestion_recovery_start_time = Some(Instant::now());
-            debug!("Estimated bandwidth: {}, estimated current throughput: {}",self.estimate_bandWidth(), self.congestion_window as u64 * 100000000 / self.smoothed_RTT);
-            if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 >= self.estimate_bandWidth() as f64 * 0.5 {
-                self.congestion_window = (self.congestion_window as f64 * 0.8) as usize;
+            if self.min_RTT != 0 {
+                debug!("Estimated bandwidth: {}, estimated current throughput: {}",self.estimate_bandWidth(), self.congestion_window as u64 * 100000000 / self.smoothed_RTT);
+                if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 >= self.estimate_bandWidth() as f64 * 0.5 {
+                    self.congestion_window = (self.congestion_window as f64 * 0.8) as usize;
+                }
             }
             self.congestion_window = cmp::max(self.congestion_window, 14720);
             self.slow_start_threshold = self.congestion_window;
