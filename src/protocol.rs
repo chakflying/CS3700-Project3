@@ -601,7 +601,6 @@ impl State {
     }
     pub fn on_ack_received(&mut self, ack_frame: &AckFrame) {
         debug!("Processing AckFrame: {:?}", ack_frame);
-        self.PTO_amount = 0;
         if self.sent_largest_ACKed == 0 {
             self.sent_largest_ACKed = ack_frame.largest_ack;
         } else {
@@ -610,6 +609,7 @@ impl State {
         if self.closing != None && self.closing.unwrap() < self.sent_largest_ACKed { self.connected = false; return; }
         let new_latest_ack = self.sent_packets.contains_key(&ack_frame.largest_ack);
         if new_latest_ack {
+            self.PTO_amount = 0;
             self.latest_RTT = (Instant::now() - self.sent_packets.get(&ack_frame.largest_ack).unwrap().time_sent).as_nanos() as u64;
             self.update_RTT(ack_frame.ack_delay);
             if self.established == false { self.established = true; }
