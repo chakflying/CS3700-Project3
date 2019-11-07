@@ -687,7 +687,7 @@ impl State {
             debug!("Data reported as complete.");
             return true;
         } else { 
-            debug!("Assemble data failed, latest offset: {}", self.receive_state.assembled_data.len());
+            // debug!("Assemble data failed, latest offset: {}", self.receive_state.assembled_data.len());
             return false; 
         }
     }
