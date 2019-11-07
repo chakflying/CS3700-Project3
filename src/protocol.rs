@@ -628,7 +628,9 @@ impl State {
             if self.min_RTT != 0 {
                 debug!("Estimated bandwidth: {}, estimated current throughput: {}",self.estimate_bandWidth(), self.congestion_window as u64 * 100000000 / self.smoothed_RTT);
                 if (self.congestion_window as u64 * 100000000 / self.smoothed_RTT) as f64 >= self.estimate_bandWidth() as f64 * 0.5 {
-                    self.congestion_window = (self.congestion_window as f64 * 0.8) as usize;
+                    self.congestion_window = (self.congestion_window as f64 * 0.7) as usize;
+                } else {
+                    self.congestion_window = (self.congestion_window as f64 * 0.9) as usize;
                 }
             }
             self.congestion_window = cmp::max(self.congestion_window, 14720);
@@ -817,7 +819,7 @@ impl State {
         if self.min_RTT == 0 {
             14720 * 100000000 / Duration::from_millis(100).as_nanos() as u64
         } else {
-            self.max_congestion_window as u64 * 100000000 / ((self.min_RTT + self.smoothed_RTT) / 2)
+            self.max_congestion_window as u64 * 100000000 / self.min_RTT
         }
     }
 }
