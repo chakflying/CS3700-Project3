@@ -653,7 +653,7 @@ impl State {
         } else {
             output = self.smoothed_RTT + cmp::max(4 * self.RTT_variance, Duration::from_millis(1).as_nanos() as u64) + Duration::from_millis(1).as_nanos() as u64;
         }
-        if self.PTO_amount > 0  && self.PTO_amount < 5 {
+        if self.PTO_amount > 0  && self.PTO_amount < 2 {
             output = self.last_PTO * 2;
         }
         output
